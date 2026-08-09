@@ -65,6 +65,10 @@ public final class ProjectsAdapter extends BaseAdapter {
             h = (Holder) convert.getTag();
         }
 
+        try {
+            java.lang.reflect.Method vmClip = convert.getClass().getMethod("setClipToOutline", boolean.class);
+            vmClip.invoke(convert, Boolean.TRUE);
+        } catch (Throwable ignored) { }
         final Project p = projects.get(position);
         h.name.setText(p.name);
         String date = DateFormat.getDateInstance(DateFormat.MEDIUM)
