@@ -11,7 +11,7 @@ import android.widget.Toast;
 
 import android.app.Activity;
 
-import com.videomontage.app.R;
+import com.videomontage.R;
 import com.videomontage.core.Timecode;
 import com.videomontage.decoder.MediaProbe;
 import com.videomontage.decoder.WaveformExtractor;
