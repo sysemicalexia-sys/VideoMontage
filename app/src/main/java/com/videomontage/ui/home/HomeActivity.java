@@ -10,7 +10,7 @@ import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.videomontage.app.R;
+import com.videomontage.R;
 import com.videomontage.editor.model.Project;
 import com.videomontage.editor.model.Timeline;
 import com.videomontage.project.ProjectRepository;
