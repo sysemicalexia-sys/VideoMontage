@@ -24,4 +24,7 @@
     <color name="aurora_a">#FF1B2A4A</color>
     <color name="aurora_b">#FF2A1B4A</color>
     <color name="aurora_c">#FF0E1B33</color>
+    <color name="accent_deep">#FF1D4ED8</color>
+    <color name="violet">#FF8B5CF6</color>
+    <color name="teal">#FF2DD4BF</color>
 </resources>
