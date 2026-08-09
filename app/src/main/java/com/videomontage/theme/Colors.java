@@ -18,7 +18,7 @@ public final class Colors {
     public static final int VIOLET = Color.rgb(0x8B, 0x5C, 0xF6);
     public static final int TEAL = Color.rgb(0x2D, 0xD4, 0xBF);
     public static final int TEXT_PRIMARY = Color.rgb(0xFA, 0xFA, 0xFA);
-    public static final int TEXT_SECONDARY = Color.rgb(0xA1, 0xAA, 0xAA) & 0xFFA1A1AA | 0x00000000;
+    public static final int TEXT_SECONDARY = Color.rgb(0xA1, 0xA1, 0xAA);
     public static final int TEXT_TERTIARY = Color.rgb(0x71, 0x71, 0x7A);
 
     public static final int TRACK_VIDEO = Color.rgb(0x25, 0x63, 0xEB);
