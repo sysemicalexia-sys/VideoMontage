@@ -153,7 +153,11 @@ public final class EditorActivity extends Activity {
                     + (why != null ? "\n" + why : ""),
                     Toast.LENGTH_LONG).show();
         }
-        previewView.setCoordinator(preview.renderer());
+        try {
+            previewView.setCoordinator(preview.renderer());
+        } catch (Throwable t) {
+            Toast.makeText(this, "Preview unavailable", Toast.LENGTH_SHORT).show();
+        }
         previewView.setGestureListener(new PreviewView.GestureListener() {
             @Override public void onSingleTap() {
                 if (transport.getAlpha() < 1f) ViewFx.showSoft(transport);
