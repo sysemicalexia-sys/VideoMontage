@@ -4,8 +4,6 @@ import com.videomontage.editor.model.Timeline;
 import com.videomontage.playback.PlaybackController;
 import com.videomontage.render.RenderCoordinator;
 
-/** Glues playback to rendering for the editor screen. The preview view
- *  owns the surface; this owns what to show on it and when. */
 public final class PreviewController {
 
     public interface Host {
@@ -39,7 +37,6 @@ public final class PreviewController {
     public PlaybackController playback() { return playback; }
     public RenderCoordinator renderer() { return renderer; }
 
-    /** Single write point: renderer AND audio always see the same timeline. */
     public void setTimeline(Timeline timeline) {
         renderer.setTimeline(timeline);
         playback.setTimeline(timeline);

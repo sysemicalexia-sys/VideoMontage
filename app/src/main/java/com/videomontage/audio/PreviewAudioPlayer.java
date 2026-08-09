@@ -17,9 +17,6 @@ import com.videomontage.timeline.PlaybackClock;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-/** Preview audio: continuously decodes whichever clip owns the playhead
- *  (audio lanes, or video clips with embedded audio) and streams it through
- *  one AudioTrack, locked to the render clock so A/V never drift. */
 public final class PreviewAudioPlayer {
 
     private static final int SAMPLE_RATE = 44100;
@@ -67,7 +64,6 @@ public final class PreviewAudioPlayer {
         }
     }
 
-    /** First clip owning the playhead: audio lanes first, then embedded video audio. */
     private Clip activeClipAt(long t) {
         Timeline tl = timeline;
         for (Track tr : tl.tracks) {
@@ -107,7 +103,7 @@ public final class PreviewAudioPlayer {
                 if (clip != null) {
                     Object[] opened = open(clip, t);
                     if (opened != null) { ex = (MediaExtractor) opened[0]; codec = (MediaCodec) opened[1]; openId = id; }
-                    else openId = id; // don't retry a broken source every tick
+                    else openId = id;
                 }
             }
 
@@ -117,7 +113,6 @@ public final class PreviewAudioPlayer {
             }
 
             if (!pumpOne(clip, ex, codec)) {
-                // stream ended or errored: drop decoder, re-evaluate next tick
                 teardown(ex, codec);
                 ex = null; codec = null; openId = null;
             }
@@ -147,7 +142,6 @@ public final class PreviewAudioPlayer {
         }
     }
 
-    /** Decode and write one output buffer; false when the source is exhausted. */
     private boolean pumpOne(Clip clip, MediaExtractor ex, MediaCodec codec) {
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         try {

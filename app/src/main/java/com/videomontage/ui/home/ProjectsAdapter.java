@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/** GridView adapter with the classic holder pattern — framework only. */
 public final class ProjectsAdapter extends BaseAdapter {
 
     public interface Callback {
@@ -94,7 +93,6 @@ public final class ProjectsAdapter extends BaseAdapter {
         return convert;
     }
 
-    /** AIDE's aapt predates android:clipToOutline in XML; clip at runtime. */
     private static Method sClipToOutline;
     private static void clipCardToOutline(View card) {
         try {

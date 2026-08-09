@@ -4,8 +4,6 @@ import com.videomontage.audio.PreviewAudioPlayer;
 import com.videomontage.editor.model.Timeline;
 import com.videomontage.timeline.PlaybackClock;
 
-/** Couples the clock to audio: play/pause/seek stay in lockstep, and the
- *  clock remains the single source of truth for position. */
 public final class PlaybackController {
 
     private final PlaybackClock clock = new PlaybackClock();

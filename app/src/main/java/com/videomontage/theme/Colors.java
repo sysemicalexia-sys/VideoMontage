@@ -2,8 +2,6 @@ package com.videomontage.theme;
 
 import android.graphics.Color;
 
-/** Java mirror of res/values/colors.xml for custom views that draw with
- *  Paint — keep the two in sync, XML is the source of truth. */
 public final class Colors {
     private Colors() {}
 
@@ -12,7 +10,6 @@ public final class Colors {
     public static final int SURFACE_ELEVATED = Color.rgb(0x27, 0x27, 0x2A);
     public static final int BORDER           = Color.rgb(0x3F, 0x3F, 0x46);
 
-    // Legacy aliases kept so every existing call site compiles.
     public static final int INK      = BG_APP;
     public static final int GRAPHITE = SURFACE;
     public static final int CHARCOAL = SURFACE_ELEVATED;

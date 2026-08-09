@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  CRITICAL: every class name below is a FULLY-QUALIFIED class name (FQCN).
-  Do NOT shorten them to ".HomeActivity" / ".MontageApp" — relative names
-  resolve against the manifest package and produce ClassNotFoundException
-  at launch (the classic "app dies instantly on open" crash).
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature
@@ -34,5 +28,4 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
     </application>
-
 </manifest>

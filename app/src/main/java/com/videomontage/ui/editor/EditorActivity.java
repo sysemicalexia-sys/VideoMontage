@@ -41,9 +41,6 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** The editor. Preview dominates, timeline anchors the bottom, transport
- *  floats between. All edits route through TimelineEngine; all rendering
- *  routes through PreviewController. This class only wires intents. */
 public final class EditorActivity extends Activity {
 
     public static final String EXTRA_PROJECT_ID = "project_id";
@@ -123,14 +120,11 @@ public final class EditorActivity extends Activity {
             }
 
             @Override public void onSnapGuide(Long atMs) {
-                // TimelineView draws the guide itself.
             }
         });
 
         engine.addListener(new TimelineEngine.Listener() {
             @Override public void onTimelineChanged(Timeline next) {
-                // THE critical propagation: renderer + audio + views always
-                // see the newest timeline, otherwise the canvas stays black.
                 timelineView.setTimeline(next);
                 preview.setTimeline(next);
                 updateDuration(next);
@@ -163,7 +157,6 @@ public final class EditorActivity extends Activity {
             }
 
             @Override public void onZoomChanged(float zoom, float focusX, float focusY) {
-                // Hook for a future pan/zoom tool.
             }
         });
         preview.setHost(new PreviewController.Host() {
@@ -302,7 +295,6 @@ public final class EditorActivity extends Activity {
             engine.insertClip(track.id, clip);
         }
         engine.select(null);
-        // Jump the playhead to the new clip so the preview shows it at once.
         preview.seek(startAt);
         engine.setPlayhead(startAt);
         updateTimecode(startAt);
@@ -338,7 +330,6 @@ public final class EditorActivity extends Activity {
         });
     }
 
-    /** Autosave on every committed mutation — projects can't be lost. */
     private void persist() {
         final Project snapshot = project.touched(engine.timeline());
         project = snapshot;
@@ -353,9 +344,9 @@ public final class EditorActivity extends Activity {
         Toast.makeText(this, R.string.export_started, Toast.LENGTH_SHORT).show();
         exportManager.export(engine.timeline(), out.getAbsolutePath(),
                 new ExportManager.Callback() {
-            @Override public void onProgress(float fraction) { /* progress sheet hooks here */ }
+            @Override public void onProgress(float fraction) { }
 
-            @Override public void onFinished(String outputPath) {
+            @Override public void onFinished(final String outputPath) {
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
                         Toast.makeText(EditorActivity.this,

@@ -20,7 +20,6 @@
     <color name="track_text">#FF8B5CF6</color>
     <color name="track_fx">#FFF59E0B</color>
 
-    <!-- Legacy aliases -->
     <color name="ink">#FF09090B</color>
     <color name="graphite">#FF18181B</color>
     <color name="charcoal">#FF27272A</color>

@@ -20,8 +20,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Landing screen: ambient gradient, recent projects grid, one dominant
- *  action. Framework-only — no support libraries. */
 public final class HomeActivity extends Activity {
 
     private ProjectRepository repository;
