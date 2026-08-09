@@ -19,11 +19,15 @@ public final class StoragePaths {
     }
 
     public static File exportsDir(Context context) {
-        return ensure(new File(context.getExternalFilesDir(null), "exports"));
+        File ext = context.getExternalFilesDir(null);
+        if (ext == null) ext = context.getFilesDir();
+        return ensure(new File(ext, "exports"));
     }
 
     public static File importsDir(Context context) {
-        return ensure(new File(context.getExternalFilesDir(null), "imports"));
+        File ext = context.getExternalFilesDir(null);
+        if (ext == null) ext = context.getFilesDir();
+        return ensure(new File(ext, "imports"));
     }
 
     private static File ensure(File dir) {
