@@ -71,9 +71,10 @@ public final class HomeActivity extends Activity {
                 final List<Project> projects = repository.list();
                 runOnUiThread(new Runnable() {
                     @Override public void run() {
-                        adapter.submit(projects);
+                        if (isFinishing() || isDestroyed()) return;
+                        if (adapter != null) adapter.submit(projects);
                         TextView empty = findViewById(R.id.emptyHint);
-                        empty.setVisibility(projects.isEmpty() ? View.VISIBLE : View.GONE);
+                        if (empty != null) empty.setVisibility(projects.isEmpty() ? View.VISIBLE : View.GONE);
                     }
                 });
             }
@@ -94,6 +95,7 @@ public final class HomeActivity extends Activity {
     }
 
     private void confirmDelete(final Project project) {
+        if (isFinishing() || isDestroyed()) return;
         new AlertDialog.Builder(this)
                 .setTitle(R.string.delete_project_title)
                 .setMessage(getString(R.string.delete_project_message, project.name))
