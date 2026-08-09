@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.videomontage">
+    package="com.videomontage.app">
 
     <uses-feature
         android:glEsVersion="0x00030000"
@@ -12,7 +12,7 @@
         android:name="com.videomontage.app.MontageApp"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="VideoMontage V4"
+        android:label="VideoMontage"
         android:theme="@style/Theme.Montage"
         android:hardwareAccelerated="true">
 
