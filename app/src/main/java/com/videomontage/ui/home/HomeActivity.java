@@ -31,7 +31,12 @@ public final class HomeActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
-        Toast.makeText(this, "VM 3.0-v2", Toast.LENGTH_LONG).show();
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != 0) {
+                requestPermissions(new String[] { android.Manifest.permission.WRITE_EXTERNAL_STORAGE }, 77);
+            }
+        }
+        Toast.makeText(this, "VM 4.0-recon", Toast.LENGTH_LONG).show();
         repository = new ProjectRepository(this);
 
         GridView grid = findViewById(R.id.projectGrid);

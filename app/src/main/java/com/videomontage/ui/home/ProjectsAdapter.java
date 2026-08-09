@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -13,12 +14,12 @@ import com.videomontage.app.R;
 import com.videomontage.core.Timecode;
 import com.videomontage.editor.model.Project;
 
-import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/** GridView adapter: holder pattern, explicit delete button, Java7-safe. */
 public final class ProjectsAdapter extends BaseAdapter {
 
     public interface Callback {
@@ -59,16 +60,12 @@ public final class ProjectsAdapter extends BaseAdapter {
             h.thumbnail = convert.findViewById(R.id.thumbnail);
             h.name = convert.findViewById(R.id.name);
             h.meta = convert.findViewById(R.id.meta);
-            clipCardToOutline(convert);
+            h.delete = convert.findViewById(R.id.delete);
             convert.setTag(h);
         } else {
             h = (Holder) convert.getTag();
         }
 
-        try {
-            java.lang.reflect.Method vmClip = convert.getClass().getMethod("setClipToOutline", boolean.class);
-            vmClip.invoke(convert, Boolean.TRUE);
-        } catch (Throwable ignored) { }
         final Project p = projects.get(position);
         h.name.setText(p.name);
         String date = DateFormat.getDateInstance(DateFormat.MEDIUM)
@@ -85,8 +82,15 @@ public final class ProjectsAdapter extends BaseAdapter {
         } else {
             h.thumbnail.setImageResource(R.drawable.bg_thumb_placeholder);
         }
+        try {
+            java.lang.reflect.Method vmClip = convert.getClass().getMethod("setClipToOutline", boolean.class);
+            vmClip.invoke(convert, Boolean.TRUE);
+        } catch (Throwable ignored) { }
         convert.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { callback.onOpen(p); }
+        });
+        h.delete.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { callback.onDelete(p); }
         });
         convert.setOnLongClickListener(new View.OnLongClickListener() {
             @Override public boolean onLongClick(View v) {
@@ -97,20 +101,10 @@ public final class ProjectsAdapter extends BaseAdapter {
         return convert;
     }
 
-    private static Method sClipToOutline;
-    private static void clipCardToOutline(View card) {
-        try {
-            if (sClipToOutline == null) {
-                sClipToOutline = View.class.getMethod("setClipToOutline", boolean.class);
-            }
-            sClipToOutline.invoke(card, true);
-        } catch (Throwable ignored) {
-        }
-    }
-
     private static final class Holder {
         ImageView thumbnail;
         TextView name;
         TextView meta;
+        ImageButton delete;
     }
 }
