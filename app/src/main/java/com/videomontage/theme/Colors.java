@@ -31,6 +31,10 @@ public final class Colors {
     public static final int TRACK_TEXT  = Color.rgb(0x8B, 0x5C, 0xF6);
     public static final int TRACK_FX    = Color.rgb(0xF5, 0x9E, 0x0B);
 
+        public static final int ACCENT_DIM = Color.rgb(0x1D, 0x4E, 0xD8);
+    public static final int VIOLET = Color.rgb(0x8B, 0x5C, 0xF6);
+    public static final int TEAL = Color.rgb(0x2D, 0xD4, 0xBF);
+
     public static int forTrack(com.videomontage.editor.model.Track.Kind kind) {
         switch (kind) {
             case AUDIO: return TRACK_AUDIO;
