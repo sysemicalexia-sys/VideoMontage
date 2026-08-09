@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 36
     defaultConfig {
-        applicationId "com.videomontage.app"
+        applicationId "com.videomontage.v2"
         minSdkVersion 26
         targetSdkVersion 29
         versionCode 4

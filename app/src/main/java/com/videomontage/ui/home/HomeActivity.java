@@ -31,6 +31,7 @@ public final class HomeActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        Toast.makeText(this, "VM 3.0-v2", Toast.LENGTH_LONG).show();
         Toast.makeText(this, "VM 3.0-final", Toast.LENGTH_SHORT).show();
         repository = new ProjectRepository(this);
 
