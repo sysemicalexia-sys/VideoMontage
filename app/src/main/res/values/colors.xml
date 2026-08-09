@@ -4,22 +4,18 @@
     <color name="surface">#FF18181B</color>
     <color name="surface_elevated">#FF27272A</color>
     <color name="border">#FF3F3F46</color>
-
     <color name="accent">#FF3B82F6</color>
     <color name="accent_violet">#FF8B5CF6</color>
     <color name="accent_deep">#FF1D4ED8</color>
     <color name="violet">#FF8B5CF6</color>
     <color name="teal">#FF2DD4BF</color>
-
     <color name="text_primary">#FFFAFAFA</color>
     <color name="text_secondary">#FFA1A1AA</color>
     <color name="text_tertiary">#FF71717A</color>
-
     <color name="track_video">#FF2563EB</color>
     <color name="track_audio">#FF10B981</color>
     <color name="track_text">#FF8B5CF6</color>
     <color name="track_fx">#FFF59E0B</color>
-
     <color name="ink">#FF09090B</color>
     <color name="graphite">#FF18181B</color>
     <color name="charcoal">#FF27272A</color>

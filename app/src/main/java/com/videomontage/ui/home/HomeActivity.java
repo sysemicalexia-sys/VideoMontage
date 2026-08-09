@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.GridView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.videomontage.app.R;
 import com.videomontage.editor.model.Project;
@@ -30,6 +31,7 @@ public final class HomeActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        Toast.makeText(this, "VM 3.0-final", Toast.LENGTH_SHORT).show();
         repository = new ProjectRepository(this);
 
         GridView grid = findViewById(R.id.projectGrid);
