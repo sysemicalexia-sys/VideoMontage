@@ -34,7 +34,7 @@ public final class NativeEngine {
             }
             System.loadLibrary("montage_engine");
             loaded = true;
-        } catch (UnsatisfiedLinkError e) {
+        } catch (Throwable e) {
             loadError = e.getMessage();
             Log.e(TAG, "native library failed to load: " + loadError);
         }
