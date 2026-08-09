@@ -72,8 +72,11 @@ public final class ProjectsAdapter extends BaseAdapter {
                 ? Timecode.formatShort(p.timeline.durationMs()) + "  ·  " + date
                 : date);
         if (p.thumbnailPath != null) {
-            Bitmap bmp = BitmapFactory.decodeFile(p.thumbnailPath);
-            h.thumbnail.setImageBitmap(bmp);
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = 4;
+            Bitmap bmp = BitmapFactory.decodeFile(p.thumbnailPath, opts);
+            if (bmp != null) h.thumbnail.setImageBitmap(bmp);
+            else h.thumbnail.setImageResource(R.drawable.bg_thumb_placeholder);
         } else {
             h.thumbnail.setImageResource(R.drawable.bg_thumb_placeholder);
         }
