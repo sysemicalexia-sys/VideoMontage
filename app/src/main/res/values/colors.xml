@@ -1,21 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ink">#FF0A0B0E</color>
-    <color name="graphite">#FF111318</color>
-    <color name="charcoal">#FF171A21</color>
-    <color name="slate">#FF1F232D</color>
+    <color name="bg_app">#FF09090B</color>
+    <color name="surface">#FF18181B</color>
+    <color name="surface_elevated">#FF27272A</color>
+    <color name="border">#FF3F3F46</color>
+    
+    <color name="accent">#FF3B82F6</color>
+    <color name="accent_violet">#FF8B5CF6</color>
+    <color name="text_primary">#FFFAFAFA</color>
+    <color name="text_secondary">#FFA1A1AA</color>
+    <color name="text_tertiary">#FF71717A</color>
+    
+    <color name="track_video">#FF2563EB</color>
+    <color name="track_audio">#FF10B981</color>
+    <color name="track_text">#FF8B5CF6</color>
+    <color name="track_fx">#FFF59E0B</color>
+
+    <!-- Legacy mappings just in case -->
+    <color name="ink">#FF09090B</color>
+    <color name="graphite">#FF18181B</color>
+    <color name="charcoal">#FF27272A</color>
+    <color name="slate">#FF3F3F46</color>
     <color name="hairline">#14FFFFFF</color>
-
-    <color name="accent">#FF4C8DFF</color>
-    <color name="accent_deep">#FF2E5FD8</color>
-    <color name="violet">#FF8B5CF6</color>
-    <color name="teal">#FF2DD4BF</color>
-
-    <color name="text_primary">#FFF4F5F7</color>
-    <color name="text_secondary">#FF9BA1AD</color>
-    <color name="text_tertiary">#FF5C6270</color>
-
-    <color name="aurora_a">#FF1B2A4A</color>
-    <color name="aurora_b">#FF2A1B4A</color>
-    <color name="aurora_c">#FF0E1B33</color>
 </resources>
