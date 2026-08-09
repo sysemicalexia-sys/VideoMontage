@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VideoMontage</string>
+    <string name="home_headline">Your studio</string>
+    <string name="home_subline">Pick up where you left off, or start something new.</string>
+    <string name="create_project">New project</string>
+    <string name="create_project_hint">Start from your camera roll</string>
+    <string name="empty_projects">No projects yet — your edits will live here.</string>
+    <string name="delete_project_title">Delete project?</string>
+    <string name="delete_project_message">“%1$s” will be removed permanently.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="import_failed">Couldn’t import that file</string>
+    <string name="export_started">Export started…</string>
+    <string name="export_done">Exported to %1$s</string>
+</resources>

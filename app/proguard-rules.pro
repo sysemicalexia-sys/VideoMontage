@@ -1,0 +1,2 @@
+-keep class com.videomontage.nativecore.** { *; }
+-keepclasseswithmembernames class * { native <methods>; }

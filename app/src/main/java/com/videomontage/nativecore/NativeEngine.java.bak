@@ -1,0 +1,45 @@
+package com.videomontage.nativecore;
+
+import android.view.Surface;
+
+/** JNI facade — the only Java class that talks to montage_engine directly.
+ *  All arrays use the wire format documented in jni_bridge.cpp: parallel
+ *  arrays, effects flattened as [kind, p0..p3] runs. */
+public final class NativeEngine {
+
+    static {
+        // With APP_STL=c++_static (recommended for AIDE — see notes) there is
+        // no separate STL library to load, and AIDE builds have been seen to
+        // silently drop libc++_shared.so from the APK. Try, but never require
+        // it; with c++_shared properly packaged this simply succeeds.
+        try {
+            System.loadLibrary("c++_shared");
+        } catch (UnsatisfiedLinkError ignored) {
+            // static STL — nothing extra to load
+        }
+        System.loadLibrary("montage_engine");
+    }
+
+    private NativeEngine() {}
+
+    public static native boolean nativeInit(int canvasWidth, int canvasHeight);
+    public static native boolean nativeAttachPreview(Surface surface);
+    public static native void nativeDetachPreview();
+
+    public static native boolean nativeRenderAt(
+            String[] paths, int[] clipKeys, long[] sourcePtsUs,
+            float[] mvps, float[] opacities,
+            float[] effects, int[] effectCounts, long timelinePtsUs);
+
+    public static native void nativeInvalidate();
+
+    public static native boolean nativeStartExport(String outputPath, int width, int height, int frameRate);
+    public static native boolean nativeExportFrame(
+            String[] paths, int[] clipKeys, long[] sourcePtsUs,
+            float[] mvps, float[] opacities,
+            float[] effects, int[] effectCounts, long ptsUs);
+    public static native boolean nativeFinishExport();
+    public static native void nativeCancelExport();
+    public static native float nativeExportProgress();
+    public static native void nativeShutdown();
+}

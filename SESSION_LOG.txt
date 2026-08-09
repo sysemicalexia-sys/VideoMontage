@@ -1,0 +1,290 @@
+================================================================================
+VideoMontage rebuild — session log
+Every assistant message (prose) and every shell command executed, in order.
+File contents written via heredoc are part of the repository itself; the log
+records the command and target path, with the body elided as [file body].
+================================================================================
+
+--------------------------------------------------------------------------------
+MESSAGE (assistant):
+No existing project was found in the workspace — the upload folder is empty,
+so this is a from-scratch rebuild of VideoMontage with the full architecture:
+modular design, native C++ engine, custom timeline, cinematic UI.
+
+COMMAND: ls -la /mnt/agents/upload/ ; ls /mnt/agents/ ; which gradle ; find /mnt/agents/upload -maxdepth 3 -type f | head -50
+OUTPUT: upload empty; no gradle; no Android SDK present in sandbox.
+
+COMMAND: mkdir -p /tmp/VideoMontage/{gradle,app,...} (brace expansion)
+NOTE: shell was dash, not bash — brace expansion created a literal directory
+named "{gradle,app". Detected and repaired.
+
+MESSAGE (assistant): Fixed the tree with an explicit mkdir loop.
+
+COMMAND: cd /tmp/VideoMontage && rm -rf '{gradle,app' && for d in gradle/wrapper app/src/main/java/... (18 module dirs); do mkdir -p "$d"; done
+
+--- Phase 1 (Kotlin/Compose multi-module layout, later superseded by AIDE
+--- constraints — superseded files were deleted and are NOT in this repo) ---
+Wrote: settings.gradle.kts, build.gradle.kts, gradle.properties,
+gradle/libs.versions.toml, gradle/shared-module.gradle.kts;
+theme module (Palette.kt, Type.kt, Motion.kt, Theme.kt);
+core (MontageDispatchers, Time, Scalars, Ids);
+editor model (Geometry, Keyframes, Effects, Transitions, Clip, Track,
+Timeline, Project) and ops (TimelineOps, UndoStack);
+timeline (MagneticSnapper, PlaybackClock, TimelineEngine);
+native module (CMakeLists, frame/pool/cache, shaders, gl_utils, decoder,
+renderer).
+
+MESSAGE (assistant): Fixing the decoder's drain loop — the first pass had
+awkward double-dequeue logic. Rewriting it cleanly.
+COMMAND: rewrite vm decoder.cpp with enum Drain { Frame, Again, Eos } tri-state.
+
+MESSAGE (assistant): Continuing the build. I'll also maintain a session log
+file capturing every command and message, and ship it with the project.
+
+USER MESSAGE: env is arm64-v8a, compiler is AIDE; sample build.gradle provided
+(compileSdkVersion 36, targetSdkVersion 29, minSdkVersion 26, abiFilters
+'arm64-v8a', ndkBuild Android.mk, Groovy DSL, deps below android block).
+
+MESSAGE (assistant):
+That changes the build constraints significantly. AIDE on-device means:
+Groovy DSL only (no version catalogs, no KTS), Java instead of Kotlin
+(AIDE's Kotlin/Compose compiler plugin support isn't reliable), ndk-build
+with Android.mk (not CMake), and a single app module (AIDE handles
+multi-module Gradle poorly) — with the modularity enforced as strict
+package boundaries instead. The C++ layer and architecture carry over
+unchanged. Restructuring now.
+
+COMMAND: rm -rf all Kotlin module dirs; mkdir app/src/main/{jni,res/...};
+for p in core editor/model ... widgets utils; mkdir -p java packages.
+
+--- Phase 2 (current repository contents) ---
+COMMAND: write settings.gradle, build.gradle (Groovy, buildscript classpath
+com.android.tools.build:gradle:8.7.3), gradle.properties, app/build.gradle
+(matching the user's AIDE template + compileOptions Java 1.8 + namespace),
+app/proguard-rules.pro, jni/Application.mk (arm64-v8a, c++_shared, c++17),
+jni/Android.mk (montage_engine, 10 sources, -lmediandk -lGLESv3 -lEGL ...).
+
+COMMAND: write jni/frame.h, frame_pool.h/.cpp (fixed arena, acquire/release),
+frame_cache.h/.cpp (LRU, generation-tagged, quantized PTS keys).
+
+COMMAND: write jni/shaders.h (vertex fullscreen-triangle via gl_VertexID,
+kLayer, kColorGrade single-pass grade, kBlur separable gaussian, kDissolve),
+gl_utils.h/.cpp (GlProgram/GlTexture/GlFramebuffer RAII, compileProgram,
+EglContext pbuffer + windowed).
+
+COMMAND: write jni/vm_decoder.h/.cpp (MediaCodec extractor+codec, keyframe
+seek, catch-up frame drop on seek, pool-slot drop under pressure).
+
+COMMAND: write jni/vm_renderer.h/.cpp (upload, ping-pong effect chain
+dispatch kind 1=grade / 2=blur, drawLayer, drawTransition).
+PATCH: fixed program-binding bug in the effect loop (drawFullscreen was
+called with the color-grade program even for blur passes).
+
+COMMAND: write jni/vm_encoder.h/.cpp (H.264 via input surface + AAC,
+AMediaMuxer, drain loops, progress), pcm_processor.h/.cpp (gain, mixInto
+with tanh soft-clip, crossfade, ramp).
+
+COMMAND: write jni/compositor.h/.cpp (LayerRequest, decoder slot table,
+cache-or-decode per layer, effect chain, drawLayer).
+PATCH: removed a leftover empty loop in decoderFor.
+
+COMMAND: write jni/engine.h/.cpp (singleton root, preview/export EGL
+arbitration, export owns GL thread) and jni_bridge.cpp (11 JNI exports,
+parallel-array layer wire format, unmarshal helper).
+NOTE: first jni_bridge draft had a broken attachPreview stub; immediately
+rewritten with ANativeWindow_fromSurface(env, surface).
+
+COMMAND: mkdir -p /mnt/agents/work && cp -r /tmp/VideoMontage → checkpoint
+(28 files). [The sandbox had wiped /tmp between turns once already; from
+this point every batch is checkpointed.]
+
+--- Java domain layer ---
+COMMAND: write core/Ids.java, Mathx.java (clamp01/lerp/easeInOut/clampLong),
+Timecode.java (mm:ss.ff).
+COMMAND: write editor/model: CropRect, Transform (immutable, toMvp),
+ClipTiming (position/duration/trimIn/speed, sourceTimeAt).
+COMMAND: write KeyframeTrack (sorted keys, smoothstep interpolation),
+Effect (Kind with native shaderId mapping), Transition, Clip (abstract base).
+COMMAND: write VideoClip, ImageClip, AudioClip (waveform peaks, fades),
+TextClip — all immutable with withTiming/withEffects/withNewId.
+COMMAND: write Track (sorted-clips invariant, insert/remove/replace),
+Timeline (queries, snapshot), Project. CHECKPOINT.
+
+COMMAND: write editor/ops/TimelineOps.java (insert with collision resolve,
+move, trim honoring source bounds, split keeping effects, remove with
+ripple), UndoStack.java (snapshot undo, 64 cap).
+
+COMMAND: write timeline/MagneticSnapper.java (pixel-constant threshold),
+PlaybackClock.java (renderer is master clock, uptime-based play position),
+TimelineEngine.java (single writer, intent methods, undo/redo, listeners).
+CHECKPOINT.
+
+--- Pipeline coordinators ---
+COMMAND: write nativecore/NativeEngine.java (JNI facade, loads c++_shared +
+montage_engine), LayerMarshaller.java (reused buffers, clip-key table,
+effect flattening [kind,p0..p3], renderAt).
+COMMAND: write render/RenderCoordinator.java (surface attach, renderFrame,
+renderSeek, invalidate on timeline change), decoder/MediaProbe.java
+(duration/size/thumbnails), decoder/WaveformExtractor.java (one-shot decode
+to ~100 peaks/sec, normalized). CHECKPOINT.
+COMMAND: write effects/EffectLibrary.java (Cinema, Teal&Orange, Noir,
+Golden Hour, Frost, Vivid, Soft Focus, Dream, Vignette, Film Grain,
+Sharpen), audio/PreviewAudioPlayer.java (AudioTrack stream of active clip,
+volume applied to PCM bytes).
+
+COMMAND: write playback/PlaybackController.java, preview/PreviewController.java
+(clock listener → host callbacks), export/ExportManager.java (dedicated
+thread, progress to main, cooperative cancel).
+PATCH: export path flaw — frames were routed to the preview surface.
+Added LayerMarshaller.exportAt() (same payload → nativeExportFrame) and
+rewired ExportManager; removed the empty-array placeholders.
+
+COMMAND: write project/ProjectStore.java (org.json schema v2: tracks, clips
+with timing/transform/effects, waveform peaks), ProjectRepository.java
+(atomic tmp+rename saves, corrupt-entry skip), storage/StoragePaths.java,
+storage/MediaImporter.java (content:// → app-private copy).
+PATCH: clip-id restoration was a no-op stub — made the id-carrying
+constructors public in all four Clip subclasses (the restore path) and
+rewrote clipFromJson to pass stored ids. CHECKPOINT.
+
+--- Widgets ---
+COMMAND: write utils/Spring.java (critically-damped integrator),
+utils/ViewFx.java (pressFeedback with overshoot, fadeSlideIn, showSoft/
+hideSoft), theme/Colors.java (mirror of colors.xml, forTrack mapping).
+COMMAND: write widgets/TimelineView.java part 1 (state machine:
+SCROLL/MOVE_CLIP/TRIM_START/TRIM_END/SCRUB drags, pinch zoom around focus,
+fling, hit-testing with trim handles on selected clip, snapCandidate with
+guide callback).
+COMMAND: append part 2 (onDraw: adaptive ruler ticks, lanes, clip gradient
+fills with viewport culling, waveform path drawing, trim handles, playhead
+diamond, spring+scroller frame loop, onMeasure). 506 lines total.
+PATCHES: hitTest now clears dragClip (stale clip leaked into next gesture);
+tap-vs-scroll disambiguation (scrub only when finger barely moved);
+selection stroke uses preallocated rect2; documented the one deliberate
+per-clip shader allocation. CHECKPOINT.
+COMMAND: write widgets/PreviewView.java (GLSurfaceView ES3, renderer
+delegates to RenderCoordinator, pinch zoom spring, double-tap reset,
+single-tap transport toggle). PATCH: Spring.target() accessor added.
+
+--- UI ---
+COMMAND: write app/MontageApp.java, ui/home/ProjectsAdapter.java
+(thumbnail, name, duration+date meta, open/delete callbacks).
+COMMAND: write ui/home/HomeActivity.java (2-column grid, create-project
+card, staggered fadeSlideIn entries, async reload, delete confirm,
+shared transition into editor).
+COMMAND: write ui/editor/EditorActivity.java (wires engine↔view↔preview,
+media import via OpenDocument + takePersistableUriPermission, thumbnail
+capture, export trigger, autosave on every mutation).
+PATCH: TimelineEngine.addTrack added (first import creates the lane).
+
+--- Resources ---
+COMMAND: write AndroidManifest.xml, values/{colors,strings,themes,dimens},
+anim/{enter_slide_up,exit_fade}.
+COMMAND: write drawables: bg_ambient (aurora diagonal gradient), bg_card,
+bg_create_card (accent→violet), bg_thumb_placeholder, bg_transport;
+icon family ic_play/pause/add/split/undo/redo/export/back (1.5dp stroke,
+round caps, 24dp viewport), ic_launcher.
+COMMAND: write layouts activity_home, item_project, activity_editor
+(preview dominant, floating transport, timeline 236dp bottom stack).
+CHECKPOINT: 97 files.
+
+--- Final fixes & packaging ---
+PATCH: manifest used relative class names that resolved against the wrong
+namespace — switched to FQCNs (com.videomontage.app.MontageApp,
+com.videomontage.ui.home.HomeActivity, com.videomontage.ui.editor.EditorActivity).
+PATCH: ruler tick paint was opaque white (0x14FFFFFF | 0xFF000000) — back to
+translucent hairline.
+
+COMMAND: write README.md (this project), SESSION_LOG.txt (this file).
+
+================================================================================
+Design decisions worth remembering
+================================================================================
+1. AIDE drove everything: Groovy DSL, Java 8 language level, ndk-build,
+   single module, only two Maven deps (appcompat, recyclerview), JSON via
+   built-in org.json, no Compose/Kotlin anywhere.
+2. The old multi-module Kotlin tree (phase 1) was discarded entirely once
+   the AIDE constraint arrived — nothing in the repo references it.
+3. JNI boundary is dumb by design: parallel primitive arrays in, GL out.
+   All business logic is C++; all UI coordination is Java.
+4. Three motion systems, one property each: zoom spring, playhead spring,
+   scroll OverScroller. Nothing ever snaps except by explicit user intent.
+5. Undo is snapshot-based because the model is immutable — the snapshot is
+   a track-list copy and clips are shared, so 64 levels cost almost nothing.
+6. Native frame memory is a fixed arena (FramePool) + generation-tagged LRU
+   (FrameCache). Decoder drops frames under pool pressure instead of
+   allocating; scrub smoothness beats completeness mid-drag.
+================================================================================
+
+--------------------------------------------------------------------------------
+ADDENDUM — AIDE build fix (aapt: Found tag id where item is expected, x3)
+--------------------------------------------------------------------------------
+USER MESSAGE: screenshot of AIDE error list — 3 errors, all
+"aapt: Found tag id where item is expected" in merged values.xml.
+
+DIAGNOSIS: AIDE's bundled aapt cannot merge modern androidx resources
+(appcompat 1.7.0). The values files themselves were valid.
+
+FIX — removed androidx entirely; project is now framework-only:
+  COMMAND: strip appcompat + recyclerview from app/build.gradle
+  COMMAND: gradle.properties reduced to jvmargs only (no useAndroidX)
+  COMMAND: themes.xml parent -> android:Theme.Material.NoActionBar
+  COMMAND: activity_home.xml RecyclerView -> framework GridView
+  COMMAND: rewrote ui/home/ProjectsAdapter.java (RecyclerView.Adapter ->
+           BaseAdapter with holder pattern)
+  COMMAND: rewrote ui/home/HomeActivity.java (AppCompatActivity -> Activity,
+           androidx AlertDialog -> android.app.AlertDialog)
+  COMMAND: patched ui/editor/EditorActivity.java (Activity, replaced
+           registerForActivityResult/OpenDocument contract with
+           startActivityForResult + onActivityResult, REQ_PICK_MEDIA=42)
+  COMMAND: grep verified zero androidx references remain
+  COMMAND: repackaged to /mnt/agents/output/VideoMontage (+ .zip, 107 KB)
+  PATCH: README updated to document the zero-dependency decision
+
+--------------------------------------------------------------------------------
+ADDENDUM 2 — AIDE Java compiler fixes (24 errors)
+--------------------------------------------------------------------------------
+USER MESSAGE: two screenshots — 24 javac errors in AIDE.
+
+DIAGNOSIS: AIDE compiles Java in 1.7 mode regardless of compileOptions:
+  1. "This word is not allowed" / "Missing ')'" — method reference
+     `this::pumpLoop` (Java 8) in PreviewAudioPlayer.
+  2. "This variable must be final to be used at this level" — effectively-
+     final capture (Java 8) in ExportManager.runExport params, ViewFx.press
+     Feedback param, EditorActivity (uri, imported, info, playing,
+     positionMs).
+  3. "No designer(...)" — Collections.emptyList() passed to a constructor
+     needs an explicit type witness under the old inference engine.
+
+FIXES:
+  COMMAND: PreviewAudioPlayer — this::pumpLoop replaced with anonymous
+           Runnable calling pumpLoop()
+  COMMAND: ExportManager.runExport params made final
+  COMMAND: ViewFx.pressFeedback / fadeSlideIn params made final
+  COMMAND: EditorActivity — onMediaPicked(final Uri), imported/info locals
+           final, onPlaybackStateChanged/onPositionChanged params final,
+           Collections.<Effect>emptyList() explicit witness
+  COMMAND: ProjectRepository — Collections.<Project>emptyList() witness
+  COMMAND: tree-wide grep — no method refs, lambdas, or bare emptyList remain
+RULE GOING FORWARD: Java 7 style only — no lambdas, no method references,
+  explicit final on every captured variable, explicit generic witnesses.
+
+--------------------------------------------------------------------------------
+ADDENDUM 3 — NDK fix (14 errors → 1 real error)
+--------------------------------------------------------------------------------
+USER MESSAGE: two screenshots — 14 NDK errors, but 13 are compile-step
+echoes; the single real error:
+  vm_encoder.cpp:48: no matching function for call to 'AMediaMuxer_new'
+  candidate: AMediaMuxer_new(int fd, OutputFormat format)
+
+DIAGNOSIS: AMediaMuxer_new takes a file descriptor, not a path — wrong in
+my code for every NDK, only surfaced now because native compilation was
+reached for the first time (Java side now compiles clean).
+
+FIX:
+  COMMAND: vm_encoder.cpp — open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644),
+           pass fd to AMediaMuxer_new, close in finish(); added
+           <fcntl.h>/<unistd.h>; vm_encoder.h gained muxerFd_
+  COMMAND: grep for other path-based/post-r17 NDK calls — none found
+NOTE: jni_bridge/engine/vm_decoder/vm_renderer compiled BEFORE the failure
+point in Android.mk order, so those four TUs are confirmed good.
