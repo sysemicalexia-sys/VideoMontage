@@ -13,6 +13,7 @@ import com.videomontage.app.R;
 import com.videomontage.core.Timecode;
 import com.videomontage.editor.model.Project;
 
+import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -59,6 +60,7 @@ public final class ProjectsAdapter extends BaseAdapter {
             h.thumbnail = convert.findViewById(R.id.thumbnail);
             h.name = convert.findViewById(R.id.name);
             h.meta = convert.findViewById(R.id.meta);
+            clipCardToOutline(convert);
             convert.setTag(h);
         } else {
             h = (Holder) convert.getTag();
@@ -90,6 +92,18 @@ public final class ProjectsAdapter extends BaseAdapter {
             }
         });
         return convert;
+    }
+
+    /** AIDE's aapt predates android:clipToOutline in XML; clip at runtime. */
+    private static Method sClipToOutline;
+    private static void clipCardToOutline(View card) {
+        try {
+            if (sClipToOutline == null) {
+                sClipToOutline = View.class.getMethod("setClipToOutline", boolean.class);
+            }
+            sClipToOutline.invoke(card, true);
+        } catch (Throwable ignored) {
+        }
     }
 
     private static final class Holder {

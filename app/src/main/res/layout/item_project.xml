@@ -4,8 +4,6 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@drawable/bg_card"
-    android:clipToOutline="true"
-    android:outlineProvider="background"
     android:elevation="4dp"
     android:foreground="?android:attr/selectableItemBackground">
 

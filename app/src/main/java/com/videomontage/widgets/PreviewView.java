@@ -31,7 +31,8 @@ public final class PreviewView extends GLSurfaceView {
         super(context, attrs);
         setEGLContextClientVersion(3);
         setPreserveEGLContextOnPause(true);
-        // Render mode is set AFTER setRenderer in setCoordinator to prevent NPE
+        // setRenderMode() happens in setCoordinator(), AFTER setRenderer().
+        // Calling it here NPEs: GLThread doesn't exist until setRenderer().
 
         scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -75,7 +76,7 @@ public final class PreviewView extends GLSurfaceView {
                 }
             }
         });
-        setRenderMode(RENDERMODE_CONTINUOUSLY);
+        setRenderMode(RENDERMODE_CONTINUOUSLY); // renderer exists now: safe
     }
 
     public void setGestureListener(GestureListener l) {
