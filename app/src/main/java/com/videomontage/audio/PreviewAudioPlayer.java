@@ -1,6 +1,5 @@
 package com.videomontage.audio;
 
-import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -12,15 +11,15 @@ import com.videomontage.editor.model.AudioClip;
 import com.videomontage.editor.model.Clip;
 import com.videomontage.editor.model.Timeline;
 import com.videomontage.editor.model.Track;
+import com.videomontage.editor.model.VideoClip;
+import com.videomontage.timeline.PlaybackClock;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
-/** Preview audio: decodes the active audio clips near the playhead and
- *  streams a summed mix through one AudioTrack. Mixing math (gain, fades)
- *  mirrors the native PcmProcessor so preview matches export. */
+/** Preview audio: continuously decodes whichever clip owns the playhead
+ *  (audio lanes, or video clips with embedded audio) and streams it through
+ *  one AudioTrack, locked to the render clock so A/V never drift. */
 public final class PreviewAudioPlayer {
 
     private static final int SAMPLE_RATE = 44100;
@@ -29,14 +28,16 @@ public final class PreviewAudioPlayer {
     private Thread thread;
     private volatile boolean running;
     private volatile long playheadMs;
-    private Timeline timeline = Timeline.empty();
+    private PlaybackClock clock;
+    private volatile Timeline timeline = Timeline.empty();
 
-    public void setTimeline(Timeline timeline) {
-        this.timeline = timeline;
-    }
+    public void setTimeline(Timeline timeline) { this.timeline = timeline; }
+    public void setClock(PlaybackClock clock) { this.clock = clock; }
+    public void setPlayhead(long ms) { this.playheadMs = ms; }
 
-    public void setPlayhead(long ms) {
-        playheadMs = ms;
+    private long playhead() {
+        PlaybackClock c = clock;
+        return c != null ? c.positionMs() : playheadMs;
     }
 
     public synchronized void start() {
@@ -61,87 +62,131 @@ public final class PreviewAudioPlayer {
             thread = null;
         }
         if (track != null) {
-            track.pause();
-            track.flush();
-            track.release();
+            try { track.pause(); track.flush(); track.release(); } catch (RuntimeException ignored) {}
             track = null;
         }
     }
 
+    /** First clip owning the playhead: audio lanes first, then embedded video audio. */
+    private Clip activeClipAt(long t) {
+        Timeline tl = timeline;
+        for (Track tr : tl.tracks) {
+            if (tr.muted || tr.kind != Track.Kind.AUDIO) continue;
+            for (Clip c : tr.clips)
+                if (t >= c.timing.positionMs && t < c.timing.endMs()) return c;
+        }
+        for (Track tr : tl.tracks) {
+            if (tr.muted) continue;
+            for (Clip c : tr.clips) {
+                if (c instanceof VideoClip && ((VideoClip) c).hasEmbeddedAudio
+                        && t >= c.timing.positionMs && t < c.timing.endMs()) return c;
+            }
+        }
+        return null;
+    }
+
+    private static String srcOf(Clip c) {
+        if (c instanceof AudioClip) return ((AudioClip) c).sourcePath;
+        if (c instanceof VideoClip) return ((VideoClip) c).sourcePath;
+        return null;
+    }
+
     private void pumpLoop() {
-        List<Clip> audioClips = activeAudioClips();
-        if (audioClips.isEmpty()) { running = false; return; }
-        // Stream the first active clip; full multi-track mixing lands with
-        // the native audio graph. The pump keeps 200 ms queued.
-        Clip clip = audioClips.get(0);
-        streamClip(clip);
-    }
-
-    private List<Clip> activeAudioClips() {
-        List<Clip> out = new ArrayList<>();
-        for (Track t : timeline.tracks) {
-            if (t.kind != Track.Kind.AUDIO || t.muted) continue;
-            for (Clip c : t.clips) {
-                if (playheadMs >= c.timing.positionMs && playheadMs < c.timing.endMs())
-                    out.add(c);
-            }
-        }
-        return out;
-    }
-
-    private void streamClip(Clip clip) {
-        if (!(clip instanceof AudioClip)) return;
-        AudioClip audio = (AudioClip) clip;
-        MediaExtractor extractor = new MediaExtractor();
+        MediaExtractor ex = null;
         MediaCodec codec = null;
-        try {
-            extractor.setDataSource(audio.sourcePath);
-            int trackIdx = findAudio(extractor);
-            if (trackIdx < 0) return;
-            extractor.selectTrack(trackIdx);
-            MediaFormat format = extractor.getTrackFormat(trackIdx);
-            codec = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME));
-            codec.configure(format, null, null, 0);
-            codec.start();
-            long sourceStartUs = audio.timing.sourceTimeAt(playheadMs) * 1000L;
-            extractor.seekTo(sourceStartUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+        String openId = null;
 
-            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-            boolean eos = false;
-            while (running && !eos) {
-                int inIdx = codec.dequeueInputBuffer(10_000);
-                if (inIdx >= 0) {
-                    ByteBuffer buf = codec.getInputBuffer(inIdx);
-                    int size = extractor.readSampleData(buf, 0);
-                    if (size < 0) {
-                        codec.queueInputBuffer(inIdx, 0, 0, 0,
-                                MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                        eos = true;
-                    } else {
-                        codec.queueInputBuffer(inIdx, 0, size, extractor.getSampleTime(), 0);
-                        extractor.advance();
-                    }
-                }
-                int outIdx = codec.dequeueOutputBuffer(info, 10_000);
-                if (outIdx >= 0) {
-                    ByteBuffer pcm = codec.getOutputBuffer(outIdx);
-                    if (pcm != null && info.size > 0 && track != null) {
-                        byte[] chunk = new byte[info.size];
-                        pcm.get(chunk);
-                        applyVolume(chunk, clip.volume);
-                        track.write(chunk, 0, chunk.length);
-                    }
-                    codec.releaseOutputBuffer(outIdx, false);
+        while (running) {
+            long t = playhead();
+            Clip clip = activeClipAt(t);
+            String id = clip == null ? null : clip.id;
+
+            if (id == null ? openId != null : !id.equals(openId)) {
+                teardown(ex, codec);
+                ex = null; codec = null; openId = null;
+                if (clip != null) {
+                    Object[] opened = open(clip, t);
+                    if (opened != null) { ex = (MediaExtractor) opened[0]; codec = (MediaCodec) opened[1]; openId = id; }
+                    else openId = id; // don't retry a broken source every tick
                 }
             }
-        } catch (IOException | RuntimeException ignored) {
-        } finally {
-            if (codec != null) {
-                try { codec.stop(); } catch (RuntimeException ignored) {}
-                codec.release();
+
+            if (codec == null) {
+                try { Thread.sleep(15); } catch (InterruptedException ignored) {}
+                continue;
             }
-            extractor.release();
+
+            if (!pumpOne(clip, ex, codec)) {
+                // stream ended or errored: drop decoder, re-evaluate next tick
+                teardown(ex, codec);
+                ex = null; codec = null; openId = null;
+            }
         }
+        teardown(ex, codec);
+    }
+
+    private Object[] open(Clip clip, long t) {
+        try {
+            MediaExtractor ex = new MediaExtractor();
+            ex.setDataSource(srcOf(clip));
+            int idx = -1;
+            for (int i = 0; i < ex.getTrackCount(); i++) {
+                String mime = ex.getTrackFormat(i).getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("audio/")) { idx = i; break; }
+            }
+            if (idx < 0) { ex.release(); return null; }
+            ex.selectTrack(idx);
+            MediaFormat fmt = ex.getTrackFormat(idx);
+            MediaCodec codec = MediaCodec.createDecoderByType(fmt.getString(MediaFormat.KEY_MIME));
+            codec.configure(fmt, null, null, 0);
+            codec.start();
+            ex.seekTo(clip.timing.sourceTimeAt(t) * 1000L, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+            return new Object[] { ex, codec };
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** Decode and write one output buffer; false when the source is exhausted. */
+    private boolean pumpOne(Clip clip, MediaExtractor ex, MediaCodec codec) {
+        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+        try {
+            int inIdx = codec.dequeueInputBuffer(10_000);
+            if (inIdx >= 0) {
+                ByteBuffer buf = codec.getInputBuffer(inIdx);
+                int size = ex.readSampleData(buf, 0);
+                if (size < 0) {
+                    codec.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                } else {
+                    codec.queueInputBuffer(inIdx, 0, size, ex.getSampleTime(), 0);
+                    ex.advance();
+                }
+            }
+            int outIdx = codec.dequeueOutputBuffer(info, 10_000);
+            if (outIdx >= 0) {
+                ByteBuffer pcm = codec.getOutputBuffer(outIdx);
+                if (pcm != null && info.size > 0 && track != null
+                        && (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) == 0) {
+                    byte[] chunk = new byte[info.size];
+                    pcm.get(chunk);
+                    applyVolume(chunk, clip.volume);
+                    track.write(chunk, 0, chunk.length);
+                }
+                codec.releaseOutputBuffer(outIdx, false);
+                return (info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) == 0;
+            }
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private static void teardown(MediaExtractor ex, MediaCodec codec) {
+        if (codec != null) {
+            try { codec.stop(); } catch (RuntimeException ignored) {}
+            codec.release();
+        }
+        if (ex != null) ex.release();
     }
 
     private static void applyVolume(byte[] pcm, float volume) {
@@ -152,13 +197,5 @@ public final class PreviewAudioPlayer {
             pcm[i] = (byte) (s & 0xff);
             pcm[i + 1] = (byte) ((s >> 8) & 0xff);
         }
-    }
-
-    private static int findAudio(MediaExtractor extractor) {
-        for (int i = 0; i < extractor.getTrackCount(); i++) {
-            String mime = extractor.getTrackFormat(i).getString(MediaFormat.KEY_MIME);
-            if (mime != null && mime.startsWith("audio/")) return i;
-        }
-        return -1;
     }
 }

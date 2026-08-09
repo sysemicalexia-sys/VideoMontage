@@ -84,6 +84,7 @@ public final class EditorActivity extends Activity {
         wirePreview();
         wireTransport();
         updateTimecode(0);
+        updateDuration(engine.timeline());
 
         ViewFx.fadeSlideIn(transport, 160);
         ViewFx.fadeSlideIn(timelineView, 240);
@@ -121,31 +122,28 @@ public final class EditorActivity extends Activity {
                 updateTimecode(positionMs);
             }
 
-            @Override public void onSnapGuide(Long atMs) { /* guide drawn by the view itself */ }
+            @Override public void onSnapGuide(Long atMs) {
+                // TimelineView draws the guide itself.
+            }
         });
 
         engine.addListener(new TimelineEngine.Listener() {
-            @Override public void onTimelineChanged(Timeline timeline) {
-                project = project.touched(timeline);
-                io.execute(new Runnable() {
-                    @Override public void run() { repository.save(project); }
-                });
-                timelineView.setTimeline(timeline);
-                preview.setTimeline(timeline);
-                updateDuration(timeline);
+            @Override public void onTimelineChanged(Timeline next) {
+                // THE critical propagation: renderer + audio + views always
+                // see the newest timeline, otherwise the canvas stays black.
+                timelineView.setTimeline(next);
+                preview.setTimeline(next);
+                updateDuration(next);
+                persist();
             }
 
             @Override public void onSelectionChanged(String clipId) {
                 timelineView.setSelectedClip(clipId);
             }
         });
-        updateDuration(engine.timeline());
     }
 
     private void wirePreview() {
-        // If the native library failed to load (e.g. libc++_shared.so or
-        // libmontage_engine.so missing from the APK), say so out loud instead
-        // of dying on the GL thread — the editor stays usable minus preview.
         if (!NativeEngine.ensureLoaded()) {
             String why = NativeEngine.loadErrorMessage();
             Toast.makeText(this,
@@ -156,7 +154,7 @@ public final class EditorActivity extends Activity {
         try {
             previewView.setCoordinator(preview.renderer());
         } catch (Throwable t) {
-            Toast.makeText(this, "Preview unavailable", Toast.LENGTH_SHORT).show();
+            android.util.Log.e("EditorActivity", "preview init failed", t);
         }
         previewView.setGestureListener(new PreviewView.GestureListener() {
             @Override public void onSingleTap() {
@@ -165,8 +163,7 @@ public final class EditorActivity extends Activity {
             }
 
             @Override public void onZoomChanged(float zoom, float focusX, float focusY) {
-                // Preview zoom is a view-level affordance; canvas transform
-                // stays with the clip. (Hook for a future pan/zoom tool.)
+                // Hook for a future pan/zoom tool.
             }
         });
         preview.setHost(new PreviewController.Host() {
@@ -245,8 +242,11 @@ public final class EditorActivity extends Activity {
 
     private void onMediaPicked(final Uri uri) {
         if (uri == null) return;
-        getContentResolver().takePersistableUriPermission(uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            getContentResolver().takePersistableUriPermission(uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (SecurityException ignored) {
+        }
         io.execute(new Runnable() {
             @Override public void run() {
                 try {
@@ -302,6 +302,10 @@ public final class EditorActivity extends Activity {
             engine.insertClip(track.id, clip);
         }
         engine.select(null);
+        // Jump the playhead to the new clip so the preview shows it at once.
+        preview.seek(startAt);
+        engine.setPlayhead(startAt);
+        updateTimecode(startAt);
     }
 
     private Track firstOrNewTrack(Timeline timeline, Track.Kind kind) {
@@ -334,6 +338,15 @@ public final class EditorActivity extends Activity {
         });
     }
 
+    /** Autosave on every committed mutation — projects can't be lost. */
+    private void persist() {
+        final Project snapshot = project.touched(engine.timeline());
+        project = snapshot;
+        io.execute(new Runnable() {
+            @Override public void run() { repository.save(snapshot); }
+        });
+    }
+
     private void startExport() {
         final File out = new File(StoragePaths.exportsDir(this),
                 project.name.replaceAll("\\s+", "_") + ".mp4");
@@ -343,13 +356,21 @@ public final class EditorActivity extends Activity {
             @Override public void onProgress(float fraction) { /* progress sheet hooks here */ }
 
             @Override public void onFinished(String outputPath) {
-                Toast.makeText(EditorActivity.this,
-                        getString(R.string.export_done, outputPath),
-                        Toast.LENGTH_LONG).show();
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        Toast.makeText(EditorActivity.this,
+                                getString(R.string.export_done, outputPath),
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
             }
 
-            @Override public void onFailed(String reason) {
-                Toast.makeText(EditorActivity.this, reason, Toast.LENGTH_LONG).show();
+            @Override public void onFailed(final String reason) {
+                runOnUiThread(new Runnable() {
+                    @Override public void run() {
+                        Toast.makeText(EditorActivity.this, reason, Toast.LENGTH_LONG).show();
+                    }
+                });
             }
         });
     }

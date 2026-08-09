@@ -39,8 +39,10 @@ public final class PreviewController {
     public PlaybackController playback() { return playback; }
     public RenderCoordinator renderer() { return renderer; }
 
+    /** Single write point: renderer AND audio always see the same timeline. */
     public void setTimeline(Timeline timeline) {
         renderer.setTimeline(timeline);
+        playback.setTimeline(timeline);
     }
 
     public void togglePlayPause() {

@@ -1,6 +1,7 @@
 package com.videomontage.playback;
 
 import com.videomontage.audio.PreviewAudioPlayer;
+import com.videomontage.editor.model.Timeline;
 import com.videomontage.timeline.PlaybackClock;
 
 /** Couples the clock to audio: play/pause/seek stay in lockstep, and the
@@ -10,7 +11,13 @@ public final class PlaybackController {
     private final PlaybackClock clock = new PlaybackClock();
     private final PreviewAudioPlayer audio = new PreviewAudioPlayer();
 
+    public PlaybackController() {
+        audio.setClock(clock);
+    }
+
     public PlaybackClock clock() { return clock; }
+
+    public void setTimeline(Timeline timeline) { audio.setTimeline(timeline); }
 
     public void play() {
         clock.play();
