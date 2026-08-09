@@ -10,7 +10,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.videomontage.app.R;
+import com.videomontage.R;
 import com.videomontage.core.Timecode;
 import com.videomontage.editor.model.Project;
 
