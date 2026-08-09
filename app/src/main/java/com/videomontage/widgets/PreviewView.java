@@ -13,21 +13,16 @@ import com.videomontage.utils.Spring;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-/** Preview surface. GL lives entirely in the native engine — this view is
- *  a vsync pump plus the gesture layer (pinch to zoom, double-tap reset,
- *  single-tap to toggle transport). */
 public final class PreviewView extends GLSurfaceView {
 
     public interface GestureListener {
         void onSingleTap();
-        /** Zoom factor and focal offset, canvas-normalized. */
         void onZoomChanged(float zoom, float focusX, float focusY);
     }
 
     private RenderCoordinator coordinator;
     private GestureListener gestureListener;
     private final Spring zoom = Spring.standard(1f);
-    private boolean renderRequested = true;
 
     private final ScaleGestureDetector scaleDetector;
     private final GestureDetector tapDetector;
@@ -36,7 +31,7 @@ public final class PreviewView extends GLSurfaceView {
         super(context, attrs);
         setEGLContextClientVersion(3);
         setPreserveEGLContextOnPause(true);
-        setRenderMode(RENDERMODE_CONTINUOUSLY);
+        // Render mode is set AFTER setRenderer in setCoordinator to prevent NPE
 
         scaleDetector = new ScaleGestureDetector(context,
                 new ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -57,7 +52,7 @@ public final class PreviewView extends GLSurfaceView {
             }
 
             @Override public boolean onDoubleTap(MotionEvent e) {
-                zoom.setTarget(1f); // spring settles back — no hard cut
+                zoom.setTarget(1f);
                 notifyZoom(e.getX(), e.getY());
                 return true;
             }
@@ -67,23 +62,20 @@ public final class PreviewView extends GLSurfaceView {
     public void setCoordinator(RenderCoordinator coordinator) {
         this.coordinator = coordinator;
         setRenderer(new Renderer() {
-            @Override public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-                // Surface attach happens in onSurfaceChanged with real dims.
-            }
-
+            @Override public void onSurfaceCreated(GL10 gl, EGLConfig config) {}
             @Override public void onSurfaceChanged(GL10 gl, int width, int height) {
                 if (PreviewView.this.coordinator != null) {
                     PreviewView.this.coordinator.attachSurface(
                             getHolder().getSurface(), width, height);
                 }
             }
-
             @Override public void onDrawFrame(GL10 gl) {
                 if (PreviewView.this.coordinator != null) {
                     PreviewView.this.coordinator.renderFrame();
                 }
             }
         });
+        setRenderMode(RENDERMODE_CONTINUOUSLY);
     }
 
     public void setGestureListener(GestureListener l) {
